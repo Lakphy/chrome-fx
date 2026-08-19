@@ -152,27 +152,34 @@ export function createWorkspace() {
       timeoutMs: number;
       outputLimitBytes: number;
     }) {
-      const files = await collectPageFiles();
-      for (const [path, content] of Object.entries(files)) {
-        await bash.writeFile(path, content);
-      }
-      const timeout = typeof timeoutMs === 'number' && timeoutMs > 0
-        ? AbortSignal.timeout(timeoutMs)
-        : undefined;
-      const combined = timeout ? AbortSignal.any([signal, timeout]) : signal;
+      // libfx maps any thrown error to WorkspaceHostFailure and drops the message.
       try {
-        const result = await bash.exec(command, { cwd: '/workspace', signal: combined });
+        if (shouldRefreshPageFiles(command)) {
+          await refreshPageFiles(bash);
+        }
+        const timeout = typeof timeoutMs === 'number' && timeoutMs > 0
+          ? AbortSignal.timeout(timeoutMs)
+          : undefined;
+        const combined = timeout && signal
+          ? AbortSignal.any([signal, timeout])
+          : timeout ?? signal;
+        const result = await bash.exec(command, {
+          cwd: '/workspace',
+          ...(combined ? { signal: combined } : {}),
+        });
         const limit = outputLimitBytes > 0 ? outputLimitBytes : 64 * 1024;
+        const exitCode = Number.isInteger(result.exitCode) ? result.exitCode : 1;
         return {
-          stdout: clip(result.stdout, limit),
-          stderr: clip(result.stderr, limit),
-          exitCode: result.exitCode,
+          stdout: clip(typeof result.stdout === 'string' ? result.stdout : '', limit),
+          stderr: clip(typeof result.stderr === 'string' ? result.stderr : '', limit),
+          exitCode,
         };
       } catch (error) {
-        if (combined.aborted) {
+        if (signal?.aborted) {
           return { stdout: '', stderr: 'command aborted\n', exitCode: 130 };
         }
-        throw new Error(errorText(error));
+        console.error('workspace.exec failed', command, error);
+        return { stdout: '', stderr: `${errorText(error)}\n`, exitCode: 1 };
       }
     },
   };
@@ -199,6 +206,18 @@ async function fetchToFile(bash: Bash, args: string[]) {
   } catch (error) {
     return { stdout: '', stderr: `${errorText(error)}\n`, exitCode: 1 };
   }
+}
+
+async function refreshPageFiles(bash: Bash) {
+  const files = await collectPageFiles();
+  for (const [path, content] of Object.entries(files)) {
+    if (typeof content !== 'string') continue;
+    await bash.writeFile(path, content);
+  }
+}
+
+function shouldRefreshPageFiles(command: string): boolean {
+  return /page\/|tabs\.json|\bbrowser\b|(?:^|[;\n|&]\s*)js\b/.test(command);
 }
 
 function clip(value: string, limit: number) {

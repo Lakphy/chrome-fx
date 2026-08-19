@@ -1,6 +1,6 @@
 import { chromeCookies, chromeTabs, runPageScript } from './ext.ts';
 import { limitedFetch } from './http.ts';
-import type { PageOp, PageResult, SnapshotResult } from './page-dispatch.ts';
+import { isSnapshotResult, type PageOp, type PageResult, type SnapshotResult } from './page-dispatch.ts';
 import { errorText } from './protocol.ts';
 import { getControllerTabId, setControllerTabId } from './settings.ts';
 
@@ -339,7 +339,13 @@ function normalizeUrl(url: string): string {
 export async function collectPageFiles(): Promise<Record<string, string>> {
   try {
     const tab = await getTab();
-    const page = await runInTab<SnapshotResult>(tab.id!, 'snapshot');
+    const page = await runInTab<unknown>(tab.id!, 'snapshot');
+    if (!isSnapshotResult(page)) {
+      const detail = page && typeof page === 'object' && 'error' in page
+        ? String((page as { error?: unknown }).error ?? 'invalid snapshot')
+        : 'invalid snapshot';
+      throw new Error(detail);
+    }
     return {
       '/workspace/page/url.txt': `${tab.url ?? ''}\n`,
       '/workspace/page/title.txt': `${tab.title ?? ''}\n`,

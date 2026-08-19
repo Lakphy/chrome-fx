@@ -1,7 +1,7 @@
 import { FX_HOST_PORT, FX_UI_PORT } from '@/lib/fx-ports.ts';
 import { openOverlayInTab } from '@/lib/open-overlay.ts';
 import type { PageOp, PageWorld } from '@/lib/page-dispatch.ts';
-import { pageDispatch } from '@/lib/page-dispatch.ts';
+import { assertPageDispatchInjectable, pageDispatch } from '@/lib/page-dispatch.ts';
 import type { ExtensionMessage, RuntimeState } from '@/lib/protocol.ts';
 import { errorText, isExtensionMessage } from '@/lib/protocol.ts';
 import { setControllerTabId } from '@/lib/settings.ts';
@@ -224,6 +224,11 @@ function handleMessage(message: ExtensionMessage, sender: Browser.runtime.Messag
 }
 
 export default defineBackground(() => {
+  try {
+    assertPageDispatchInjectable();
+  } catch (error) {
+    console.error(error);
+  }
   void ensureOffscreen();
   browser.runtime.onStartup.addListener(() => {
     void ensureOffscreen();
