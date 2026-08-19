@@ -1,0 +1,5 @@
+allowBuilds:
+  '@mongodb-js/zstd': true
+  node-liblzma: true
+minimumReleaseAgeExclude:
+  - libfx@0.0.3
