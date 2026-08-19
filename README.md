@@ -19,6 +19,12 @@ chrome-fx is a Manifest V3 extension that embeds the official fx interactive ter
 
 This is an unofficial host for [vercel-labs/fx](https://github.com/vercel-labs/fx). It is not affiliated with Vercel.
 
+> [!WARNING]
+> **Vercel AI Gateway only.** Production fx cannot use a custom OpenAI-compatible base URL or another vendor’s API key. Sign in with `/login` or paste a Gateway key. Tracked in [vercel-labs/fx#160](https://github.com/vercel-labs/fx/issues/160).
+
+> [!WARNING]
+> **`AGENTS.md` is not loaded into the model prompt.** The WASM host never attaches `/workspace/AGENTS.md` as project rules ([vercel-labs/fx#157](https://github.com/vercel-labs/fx/issues/157)). At the start of a session, tell the agent to read it (`cat AGENTS.md`). Otherwise it will not know about `browser` / `js`, or that it is driving a Chrome tab.
+
 ## Why this exists
 
 WASM headless ACP (`createFxAgent`) cannot advertise host tools. The terminal surface is the supported way to get `terminal.exec`, OAuth `/login`, slash commands, and the real fx TUI. chrome-fx is that surface, running in Chrome instead of a local CLI.
@@ -105,7 +111,11 @@ node scripts/generate-icons.mjs
 
 ### Agent workspace
 
-The shell is just-bash at `/workspace`. There is no git, Node, npm, Python, curl, or host OS. Useful entry points:
+The shell is just-bash at `/workspace`. There is no git, Node, npm, Python, curl, or host OS.
+
+Because [fx does not auto-inject `AGENTS.md` on WASM](https://github.com/vercel-labs/fx/issues/157), start a session by asking the agent to `cat AGENTS.md` (or paste that reminder yourself).
+
+Useful entry points:
 
 ```text
 ls
@@ -199,7 +209,7 @@ The service worker cannot instantiate WASM. The offscreen document cannot call `
 
 ## Limits
 
-- **Provider** — production fx talks to Vercel AI Gateway only. Custom OpenAI-compatible endpoints are not supported yet ([fx#160](https://github.com/vercel-labs/fx/issues/160)).
+- **Provider / `AGENTS.md`** — see the warnings at the top ([fx#160](https://github.com/vercel-labs/fx/issues/160), [fx#157](https://github.com/vercel-labs/fx/issues/157)).
 - **WASM surface** — no native processes, OS sandbox, native MCP, subagents, skills, or host filesystem. That is an fx WASM constraint, not this overlay.
 - **Restricted pages** — `chrome://`, `edge://`, `chrome-extension://`, and the Web Store cannot be injected.
 - **Free-tier Gateway keys** — many catalog models return `403 no_providers_available`. Switch with `/model` or add Gateway credits.
@@ -212,6 +222,7 @@ The service worker cannot instantiate WASM. The offscreen document cannot call `
 - [just-bash](https://github.com/vercel-labs/just-bash)
 - [WXT](https://wxt.dev)
 - Requested: host-configured custom provider — [fx#160](https://github.com/vercel-labs/fx/issues/160)
+- Requested: WASM should inject workspace `AGENTS.md` — [fx#157](https://github.com/vercel-labs/fx/issues/157)
 
 ## License
 
