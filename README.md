@@ -72,6 +72,8 @@ Firefox is not a supported runtime today (no JSPI + offscreen combination that f
 
 5. Pick a model the key can actually use (`/model`). Gateway free tier only covers a subset of the catalog.
 
+If another machine reports `WebAssembly.compile()` / `script-src 'self'`, it loaded a production build that lacked `'wasm-unsafe-eval'`. Chrome’s default MV3 CSP blocks WASM; `pnpm dev` injects the token, but older `pnpm build` output did not. This repo now sets it in `wxt.config.ts` — rebuild and reload `.output/chrome-mv3`.
+
 ## Development
 
 ```bash

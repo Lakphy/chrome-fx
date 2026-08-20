@@ -15,6 +15,13 @@ export default defineConfig({
       'cookies',
     ],
     host_permissions: ['<all_urls>'],
+    // Chrome's default MV3 CSP is `script-src 'self'`, which blocks
+    // WebAssembly.compile / instantiate. WXT only injects
+    // 'wasm-unsafe-eval' during `pnpm dev`, so production builds must
+    // declare it or the offscreen fx-term.wasm host fails to start.
+    content_security_policy: {
+      extension_pages: "script-src 'self' 'wasm-unsafe-eval'; object-src 'self';",
+    },
     web_accessible_resources: [
       {
         resources: ['/panel.html', '/chunks/*', '/assets/*', '/wasm/*'],
